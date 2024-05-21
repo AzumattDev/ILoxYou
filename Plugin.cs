@@ -16,7 +16,7 @@ namespace ILoxYou
     public class ILoxYouPlugin : BaseUnityPlugin
     {
         internal const string ModName = "ILoxYou";
-        internal const string ModVersion = "1.0.0";
+        internal const string ModVersion = "1.0.1";
         internal const string Author = "Azumatt";
         private const string ModGUID = $"{Author}.{ModName}";
         private readonly Harmony _harmony = new(ModGUID);
@@ -159,6 +159,16 @@ namespace ILoxYou
                 if (items.Count <= weaponIndex) return;
                 ItemDrop.ItemData weapon = items[weaponIndex];
                 PlayerStartDoodadControlPatch.RidingHumanoid.EquipItem(weapon);
+                float stamtoUse = weapon.m_shared.m_attack.m_attackStamina;
+                Sadle? doodadController = player.GetDoodadController() as Sadle;
+                if (doodadController == null) return;
+                if (weapon.m_shared.m_attack.m_attackStamina <= 0f)
+                {
+                    stamtoUse = doodadController.GetMaxStamina() * 0.05f;
+                }
+
+                if (!doodadController.HaveStamina(stamtoUse)) return;
+                doodadController.UseStamina(stamtoUse);
                 PlayerStartDoodadControlPatch.RidingHumanoid.StartAttack(null, false);
             }
 
