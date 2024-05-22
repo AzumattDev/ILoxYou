@@ -16,7 +16,7 @@ namespace ILoxYou
     public class ILoxYouPlugin : BaseUnityPlugin
     {
         internal const string ModName = "ILoxYou";
-        internal const string ModVersion = "1.0.1";
+        internal const string ModVersion = "1.0.2";
         internal const string Author = "Azumatt";
         private const string ModGUID = $"{Author}.{ModName}";
         private readonly Harmony _harmony = new(ModGUID);
@@ -29,11 +29,69 @@ namespace ILoxYou
         }
     }
 
+    [HarmonyPatch(typeof(Minimap), nameof(Minimap.UpdateEventPin))]
+    public static class UpdateEventPinPatch
+    {
+        public static void Postfix(Minimap __instance)
+        {
+            if (PlayerStartDoodadControlPatch.LastHumanoidZDOID.IsNone()) return;
+            //Populate the list of current HUD characters.
+            List<Character> guysList =
+                (from hud
+                        in EnemyHud.instance.m_huds.Values
+                    where hud.m_character != null
+                          && hud.m_character.IsTamed()
+                          && hud.m_character.GetZDOID() == PlayerStartDoodadControlPatch.LastHumanoidZDOID
+                    select hud.m_character
+                ).ToList();
+            //Add minimap pins if they haven't been added already.
+            foreach (Character character
+                     in from character in guysList
+                     where character is not Player
+                     let flag = __instance.m_pins.Any(pin => pin.m_name.Equals($"$hud_tame {character.GetHoverName()} [Health: {character.GetHealth()}]"))
+                     where !flag
+                     select character)
+            {
+                __instance.AddPin(character.GetCenterPoint(), Minimap.PinType.None, $"$hud_tame {character.GetHoverName()} [Health: {character.GetHealth()}]", false, false);
+                Sadle? sadle = null;
+                EnemyHud.instance.UpdateHuds(Player.m_localPlayer, sadle, Time.deltaTime);
+            }
+
+            //Remove minimap pins which are not needed anymore.
+            List<Minimap.PinData> removePins = new();
+
+            foreach (Minimap.PinData pin in __instance.m_pins)
+            {
+                if (pin.m_type != Minimap.PinType.None) continue;
+                bool flag = false;
+                foreach (Character character in guysList.Where(character => pin.m_name.Equals($"$hud_tame {character.GetHoverName()} [Health: {character.GetHealth()}]")))
+                {
+                    pin.m_pos.x = character.GetCenterPoint().x;
+                    pin.m_pos.y = character.GetCenterPoint().y;
+                    pin.m_pos.z = character.GetCenterPoint().z;
+                    flag = true;
+                    break;
+                }
+
+                if (!flag)
+                {
+                    removePins.Add(pin);
+                }
+            }
+
+            foreach (Minimap.PinData pin in removePins)
+            {
+                __instance.RemovePin(pin);
+            }
+        }
+    }
+
     [HarmonyPatch(typeof(Player), nameof(Player.StartDoodadControl))]
     static class PlayerStartDoodadControlPatch
     {
         public static bool RidingLox;
         public static Humanoid RidingHumanoid = null!;
+        public static ZDOID LastHumanoidZDOID;
 
         static void Postfix(Player __instance, IDoodadController shipControl)
         {
@@ -44,6 +102,7 @@ namespace ILoxYou
             {
                 RidingLox = true;
                 RidingHumanoid = shipControl.GetControlledComponent().transform.GetComponentInParent<Humanoid>();
+                LastHumanoidZDOID = RidingHumanoid.GetZDOID();
             }
         }
     }
@@ -101,7 +160,7 @@ namespace ILoxYou
                 __instance.CustomAttachStop();
                 return;
             }
-                
+
             // Detect and handle jump input specifically for dismounting
             if (ZInput.GetButton("Jump") || ZInput.GetButtonDown("JoyJump"))
             {
