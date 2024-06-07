@@ -16,16 +16,26 @@ namespace ILoxYou
     public class ILoxYouPlugin : BaseUnityPlugin
     {
         internal const string ModName = "ILoxYou";
-        internal const string ModVersion = "1.0.2";
+        internal const string ModVersion = "1.0.3";
         internal const string Author = "Azumatt";
         private const string ModGUID = $"{Author}.{ModName}";
         private readonly Harmony _harmony = new(ModGUID);
         public static readonly ManualLogSource ILoxYouLogger = BepInEx.Logging.Logger.CreateLogSource(ModName);
+        public static Sprite? LoxSprite = null;
 
         public void Awake()
         {
             Assembly assembly = Assembly.GetExecutingAssembly();
             _harmony.PatchAll(assembly);
+        }
+    }
+
+    [HarmonyPatch(typeof(ObjectDB), nameof(ObjectDB.Awake))]
+    static class ObjectDBAwakePatch
+    {
+        static void Postfix(ObjectDB __instance)
+        {
+            ILoxYouPlugin.LoxSprite = __instance.GetItemPrefab("TrophyLox").GetComponent<ItemDrop>().m_itemData.m_shared.m_icons[0];
         }
     }
 
@@ -198,8 +208,12 @@ namespace ILoxYou
             p.m_zanim.SetBool(p.m_attachAnimation, false);
             p.m_nview.GetZDO().Set(ZDOVars.s_inBed, false);
             p.ResetCloth();
-            p.m_doodadController = null;
+            p.m_doodadController.OnUseStop(p);
             p.StopDoodadControl();
+            if (p.m_doodadController != null)
+            {
+                p.m_doodadController = null;
+            }
         }
 
         public static void HandleInput(this Player player)
