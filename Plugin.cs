@@ -16,12 +16,13 @@ namespace ILoxYou
     public class ILoxYouPlugin : BaseUnityPlugin
     {
         internal const string ModName = "ILoxYou";
-        internal const string ModVersion = "1.0.3";
+        internal const string ModVersion = "1.0.4";
         internal const string Author = "Azumatt";
         private const string ModGUID = $"{Author}.{ModName}";
         private readonly Harmony _harmony = new(ModGUID);
         public static readonly ManualLogSource ILoxYouLogger = BepInEx.Logging.Logger.CreateLogSource(ModName);
         public static Sprite? LoxSprite = null;
+        public const string Fab = "TrophyLox";
 
         public void Awake()
         {
@@ -35,7 +36,9 @@ namespace ILoxYou
     {
         static void Postfix(ObjectDB __instance)
         {
-            ILoxYouPlugin.LoxSprite = __instance.GetItemPrefab("TrophyLox").GetComponent<ItemDrop>().m_itemData.m_shared.m_icons[0];
+            if (__instance.GetItemPrefab(ILoxYouPlugin.Fab) == null)
+                return;
+            ILoxYouPlugin.LoxSprite = __instance.GetItemPrefab(ILoxYouPlugin.Fab).GetComponent<ItemDrop>().m_itemData.m_shared.m_icons[0];
         }
     }
 
@@ -62,7 +65,9 @@ namespace ILoxYou
                      where !flag
                      select character)
             {
-                __instance.AddPin(character.GetCenterPoint(), Minimap.PinType.None, $"$hud_tame {character.GetHoverName()} [Health: {character.GetHealth()}]", false, false);
+                Minimap.PinData? pin = __instance.AddPin(character.GetCenterPoint(), Minimap.PinType.None, $"$hud_tame {character.GetHoverName()} [Health: {character.GetHealth()}]", false, false);
+                if (ILoxYouPlugin.LoxSprite != null)
+                    pin.m_icon = ILoxYouPlugin.LoxSprite;
                 Sadle? sadle = null;
                 EnemyHud.instance.UpdateHuds(Player.m_localPlayer, sadle, Time.deltaTime);
             }

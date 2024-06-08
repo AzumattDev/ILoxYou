@@ -1,5 +1,6 @@
 | `Version` | `Update Notes`                                                                                                                                                                                              |
 |-----------|-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| 1.0.4     | - Fix an NRE                                                                                                                                                                                                |
 | 1.0.3     | - Fix an issue where the saddle couldn't be removed after dismounting. <br/> - Make the minimap icon the Lox's                                                                                              |
 | 1.0.2     | - If you're close to a recently dismounted Lox, they will display as a pin on your minimap. Pin will move to a new Lox, should you mount another. Pins are not persistent and do not save between sessions. |
 | 1.0.1     | - Each attack uses 5% of max stamina to help balance.                                                                                                                                                       |
