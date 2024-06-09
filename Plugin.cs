@@ -16,7 +16,7 @@ namespace ILoxYou
     public class ILoxYouPlugin : BaseUnityPlugin
     {
         internal const string ModName = "ILoxYou";
-        internal const string ModVersion = "1.0.4";
+        internal const string ModVersion = "1.0.5";
         internal const string Author = "Azumatt";
         private const string ModGUID = $"{Author}.{ModName}";
         private readonly Harmony _harmony = new(ModGUID);
@@ -28,6 +28,13 @@ namespace ILoxYou
         {
             Assembly assembly = Assembly.GetExecutingAssembly();
             _harmony.PatchAll(assembly);
+        }
+
+        public static void LogIfDebug(string message)
+        {
+#if DEBUG
+            ILoxYouLogger.LogDebug(message);
+#endif
         }
     }
 
@@ -110,14 +117,13 @@ namespace ILoxYou
 
         static void Postfix(Player __instance, IDoodadController shipControl)
         {
-#if DEBUG
-            ILoxYouPlugin.ILoxYouLogger.LogDebug($"PlayerIsRidingPatch: They are on {Utils.GetPrefabName(__instance.m_doodadController.GetControlledComponent().gameObject.name)}");
-#endif
+            ILoxYouPlugin.LogIfDebug($"PlayerIsRidingPatch: They are on {Utils.GetPrefabName(__instance.m_doodadController.GetControlledComponent().gameObject.name)}");
             if (Utils.GetPrefabName(shipControl.GetControlledComponent().gameObject.name) == "Lox")
             {
                 RidingLox = true;
                 RidingHumanoid = shipControl.GetControlledComponent().transform.GetComponentInParent<Humanoid>();
                 LastHumanoidZDOID = RidingHumanoid.GetZDOID();
+                ILoxYouPlugin.ILoxYouLogger.LogDebug($"Player is riding a Lox. Humanoid ZDOID: {LastHumanoidZDOID}");
             }
         }
     }
@@ -127,16 +133,24 @@ namespace ILoxYou
     {
         static bool Prefix(Player __instance)
         {
+            ILoxYouPlugin.LogIfDebug("PlayerStopDoodadControlPatch: Attempting to stop doodad control.");
             if (__instance.m_doodadController == null || !__instance.m_doodadController.IsValid())
             {
                 // Ensure dismount if the mount dies
+                ILoxYouPlugin.LogIfDebug("PlayerStopDoodadControlPatch: Doodad controller is invalid or null.");
                 PlayerStartDoodadControlPatch.RidingLox = false;
                 PlayerStartDoodadControlPatch.RidingHumanoid = null!;
                 return true;
             }
 
 
-            return !PlayerStartDoodadControlPatch.RidingLox;
+            if (!PlayerStartDoodadControlPatch.RidingLox)
+            {
+                ILoxYouPlugin.LogIfDebug("PlayerStopDoodadControlPatch: Player is not riding a Lox.");
+                return true;
+            }
+
+            return false;
         }
     }
 
@@ -145,8 +159,10 @@ namespace ILoxYou
     {
         static bool Prefix(Humanoid __instance)
         {
+            ILoxYouPlugin.LogIfDebug($"HumanoidStartAttackPatch: Humanoid {__instance.GetHoverName()} attempting to start attack.");
             if (__instance != Player.m_localPlayer) return true;
-            return !PlayerStartDoodadControlPatch.RidingLox;
+            ILoxYouPlugin.LogIfDebug($"HumanoidStartAttackPatch: Player is {Player.m_localPlayer.GetHoverName()} and riding Lox: {PlayerStartDoodadControlPatch.RidingLox}");
+            return !PlayerStartDoodadControlPatch.RidingLox || Player.m_localPlayer.m_doodadController == null;
         }
     }
 
@@ -156,6 +172,7 @@ namespace ILoxYou
     {
         static bool Prefix(Player __instance)
         {
+            ILoxYouPlugin.LogIfDebug($"PlayerAttachStopPatch: Player is attempting to attach stop. Riding Lox: {PlayerStartDoodadControlPatch.RidingLox}");
             return !PlayerStartDoodadControlPatch.RidingLox;
         }
     }
@@ -166,19 +183,23 @@ namespace ILoxYou
     {
         static void Postfix(Player __instance)
         {
+            //ILoxYouPlugin.ILoxYouLogger.LogDebug("PlayerUpdateDoodadControlsPatch: Postfix executed.");
             if (__instance.m_doodadController == null || !__instance.m_doodadController.IsValid() || !PlayerStartDoodadControlPatch.RidingLox)
                 return;
 
             // Check if the mount is dead
             if (PlayerStartDoodadControlPatch.RidingHumanoid?.GetHealth() <= 0)
             {
+                ILoxYouPlugin.LogIfDebug("PlayerUpdateDoodadControlsPatch: Mount is dead, stopping control.");
+
                 __instance.CustomAttachStop();
                 return;
             }
 
             // Detect and handle jump input specifically for dismounting
-            if (ZInput.GetButton("Jump") || ZInput.GetButtonDown("JoyJump"))
+            if (ZInput.GetButton("Jump") || ZInput.GetButtonDown("JoyJump") || ((ZInput.GetButtonDown("Use") || ZInput.GetButtonDown("JoyUse")) && !Hud.InRadial() && __instance.m_hovering?.GetComponent<Sadle>() == null))
             {
+                ILoxYouPlugin.LogIfDebug("PlayerUpdateDoodadControlsPatch: Jump button pressed, stopping control.");
                 __instance.CustomAttachStop();
                 return;
             }
@@ -213,12 +234,9 @@ namespace ILoxYou
             p.m_zanim.SetBool(p.m_attachAnimation, false);
             p.m_nview.GetZDO().Set(ZDOVars.s_inBed, false);
             p.ResetCloth();
-            p.m_doodadController.OnUseStop(p);
             p.StopDoodadControl();
-            if (p.m_doodadController != null)
-            {
-                p.m_doodadController = null;
-            }
+            p.m_doodadController = null;
+            PlayerStartDoodadControlPatch.RidingLox = false;
         }
 
         public static void HandleInput(this Player player)
@@ -253,19 +271,6 @@ namespace ILoxYou
             ProcessInput(KeyCode.Mouse0, 0, "JoyAttack"); // Left click or Right Bumper
             ProcessInput(KeyCode.Mouse1, 1, "JoyBlock"); // Right click or Left Bumper
             ProcessInput(KeyCode.Mouse2, 2, "JoySecondaryAttack"); // Middle click or Right Trigger
-        }
-    }
-
-    public static class KeyboardExtensions
-    {
-        public static bool IsKeyDown(this KeyboardShortcut shortcut)
-        {
-            return shortcut.MainKey != KeyCode.None && Input.GetKeyDown(shortcut.MainKey) && shortcut.Modifiers.All(Input.GetKey);
-        }
-
-        public static bool IsKeyHeld(this KeyboardShortcut shortcut)
-        {
-            return shortcut.MainKey != KeyCode.None && Input.GetKey(shortcut.MainKey) && shortcut.Modifiers.All(Input.GetKey);
         }
     }
 }
