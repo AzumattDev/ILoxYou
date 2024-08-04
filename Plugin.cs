@@ -1,13 +1,9 @@
-﻿//using System;
-using System.Collections.Generic;
-//using System.IO;
+﻿using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using BepInEx;
-//using BepInEx.Configuration;
 using BepInEx.Logging;
 using HarmonyLib;
-//using JetBrains.Annotations;
 using UnityEngine;
 
 namespace ILoxYou
@@ -16,7 +12,7 @@ namespace ILoxYou
     public class ILoxYouPlugin : BaseUnityPlugin
     {
         internal const string ModName = "ILoxYou";
-        internal const string ModVersion = "1.0.5";
+        internal const string ModVersion = "1.0.10";
         internal const string Author = "Azumatt";
         private const string ModGUID = $"{Author}.{ModName}";
         private readonly Harmony _harmony = new(ModGUID);
@@ -105,6 +101,7 @@ namespace ILoxYou
                     }
                 }
             }
+
             if (removePins.Count > 0) { ILoxYouPlugin.ILoxYouLogger.LogDebug("number of pins to remove: " + removePins.Count); }
             foreach (Minimap.PinData pin in removePins)
             {
@@ -140,12 +137,6 @@ namespace ILoxYou
         static bool Prefix(Player __instance)
         {
             ILoxYouPlugin.LogIfDebug("PlayerStopDoodadControlPatch: Attempting to stop doodad control.");
-            if ((PlayerStartDoodadControlPatch.RidingLox) && (PlayerStartDoodadControlPatch.RidingHumanoid.InAttack()) && (PlayerStartDoodadControlPatch.RidingHumanoid?.GetHealth() > 0))
-            {
-
-                ILoxYouPlugin.LogIfDebug("PlayerStopDoodadControlPatch: Attempt to stop doodad control aborted, mount alive and attacking.");
-                return false;
-            }
             if (__instance.m_doodadController == null || !__instance.m_doodadController.IsValid())
             {
                 // Ensure dismount if the mount dies
@@ -156,11 +147,7 @@ namespace ILoxYou
             }
 
 
-            if (PlayerStartDoodadControlPatch.RidingLox)
-            {
-                __instance.m_doodadController.OnUseStop(__instance);//this was missing
-                return false;
-            }
+            if (PlayerStartDoodadControlPatch.RidingLox) return false;
             ILoxYouPlugin.LogIfDebug("PlayerStopDoodadControlPatch: Player is not riding a Lox.");
             return true;
         }
@@ -173,7 +160,7 @@ namespace ILoxYou
         {
             ILoxYouPlugin.LogIfDebug($"HumanoidStartAttackPatch: Humanoid {__instance.GetHoverName()} attempting to start attack.");
             if (__instance != Player.m_localPlayer) return true;
-            ILoxYouPlugin.LogIfDebug($"HumanoidStartAttackPatch: Player is {Player.m_localPlayer.GetHoverName()} and riding Lox: {PlayerStartDoodadControlPatch.RidingLox}");
+            ILoxYouPlugin.LogIfDebug($"HumanoidStartAttackPatch: Player is {Player.m_localPlayer.GetHoverName()} and Riding Lox: {PlayerStartDoodadControlPatch.RidingLox}");
             return !PlayerStartDoodadControlPatch.RidingLox || Player.m_localPlayer.m_doodadController == null;
         }
     }
@@ -184,8 +171,6 @@ namespace ILoxYou
     {
         static bool Prefix(Player __instance)
         {
-            if ((PlayerStartDoodadControlPatch.RidingLox) && (PlayerStartDoodadControlPatch.RidingHumanoid.InAttack()) && (PlayerStartDoodadControlPatch.RidingHumanoid?.GetHealth() > 0))
-                return false;
             ILoxYouPlugin.LogIfDebug($"PlayerAttachStopPatch: Player is attempting to attach stop. Riding Lox: {PlayerStartDoodadControlPatch.RidingLox}");
             return !PlayerStartDoodadControlPatch.RidingLox;
         }
@@ -197,7 +182,6 @@ namespace ILoxYou
     {
         static void Postfix(Player __instance)
         {
-            //ILoxYouPlugin.LogIfDebug("PlayerUpdateDoodadControlsPatch: Postfix executed.");
             if (__instance.m_doodadController == null || !__instance.m_doodadController.IsValid() || !PlayerStartDoodadControlPatch.RidingLox)
                 return;
 
@@ -248,9 +232,9 @@ namespace ILoxYou
             p.m_zanim.SetBool(p.m_attachAnimation, false);
             p.m_nview.GetZDO().Set(ZDOVars.s_inBed, false);
             p.ResetCloth();
+            PlayerStartDoodadControlPatch.RidingLox = false;//must be set to false before StopDoodadControl or the Prefix patch will cause the original function to not fire.
             p.StopDoodadControl();
-            p.m_doodadController = null;
-            PlayerStartDoodadControlPatch.RidingLox = false;
+            //p.m_doodadController = null;//shouldnt be necessary, is covered in StopDoodadControl
             PlayerStartDoodadControlPatch.RidingHumanoid = null!;
         }
 
