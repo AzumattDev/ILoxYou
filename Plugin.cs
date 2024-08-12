@@ -1,13 +1,9 @@
-﻿using System;
-using System.Collections.Generic;
-using System.IO;
+﻿using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using BepInEx;
-using BepInEx.Configuration;
 using BepInEx.Logging;
 using HarmonyLib;
-using JetBrains.Annotations;
 using UnityEngine;
 
 namespace ILoxYou
@@ -45,6 +41,7 @@ namespace ILoxYou
         {
             if (__instance.GetItemPrefab(ILoxYouPlugin.Fab) == null)
                 return;
+
             ILoxYouPlugin.LoxSprite = __instance.GetItemPrefab(ILoxYouPlugin.Fab).GetComponent<ItemDrop>().m_itemData.m_shared.m_icons[0];
         }
     }
@@ -59,18 +56,18 @@ namespace ILoxYou
             List<Character> guysList =
                 (from hud
                         in EnemyHud.instance.m_huds.Values
-                    where hud.m_character != null
-                          && hud.m_character.IsTamed()
-                          && hud.m_character.GetZDOID() == PlayerStartDoodadControlPatch.LastHumanoidZDOID
-                    select hud.m_character
+                 where hud.m_character != null
+                       && hud.m_character.IsTamed()
+                       && hud.m_character.GetZDOID() == PlayerStartDoodadControlPatch.LastHumanoidZDOID
+                 select hud.m_character
                 ).ToList();
             //Add minimap pins if they haven't been added already.
             foreach (Character character
                      in from character in guysList
-                     where character is not Player
-                     let flag = __instance.m_pins.Any(pin => pin.m_name.Equals($"$hud_tame {character.GetHoverName()} [Health: {character.GetHealth()}]"))
-                     where !flag
-                     select character)
+                        where character is not Player
+                        let flag = __instance.m_pins.Any(pin => pin.m_name.Equals($"$hud_tame {character.GetHoverName()} [Health: {character.GetHealth()}]"))
+                        where !flag
+                        select character)
             {
                 Minimap.PinData? pin = __instance.AddPin(character.GetCenterPoint(), Minimap.PinType.None, $"$hud_tame {character.GetHoverName()} [Health: {character.GetHealth()}]", false, false);
                 if (ILoxYouPlugin.LoxSprite != null)
@@ -97,13 +94,19 @@ namespace ILoxYou
 
                 if (!flag)
                 {
-                    removePins.Add(pin);
+                    if (pin.m_icon.Equals(ILoxYouPlugin.LoxSprite))
+                    {
+                        ILoxYouPlugin.ILoxYouLogger.LogDebug("pin to remove: " + pin.m_name + "::" + pin.m_icon + "::" + pin.m_iconElement);
+                        removePins.Add(pin);
+                    }
                 }
             }
 
+            if (removePins.Count > 0) { ILoxYouPlugin.ILoxYouLogger.LogDebug("number of pins to remove: " + removePins.Count); }
             foreach (Minimap.PinData pin in removePins)
             {
                 __instance.RemovePin(pin);
+                ILoxYouPlugin.ILoxYouLogger.LogDebug("removing pin for " + pin.m_name);
             }
         }
     }
@@ -123,7 +126,7 @@ namespace ILoxYou
                 RidingLox = true;
                 RidingHumanoid = shipControl.GetControlledComponent().transform.GetComponentInParent<Humanoid>();
                 LastHumanoidZDOID = RidingHumanoid.GetZDOID();
-                ILoxYouPlugin.ILoxYouLogger.LogDebug($"Player is riding a Lox. Humanoid ZDOID: {LastHumanoidZDOID}");
+                ILoxYouPlugin.LogIfDebug($"Player is riding a Lox. Humanoid ZDOID: {LastHumanoidZDOID}");
             }
         }
     }
@@ -157,7 +160,7 @@ namespace ILoxYou
         {
             ILoxYouPlugin.LogIfDebug($"HumanoidStartAttackPatch: Humanoid {__instance.GetHoverName()} attempting to start attack.");
             if (__instance != Player.m_localPlayer) return true;
-            ILoxYouPlugin.LogIfDebug($"HumanoidStartAttackPatch: Player is {Player.m_localPlayer.GetHoverName()} and riding Lox: {PlayerStartDoodadControlPatch.RidingLox}");
+            ILoxYouPlugin.LogIfDebug($"HumanoidStartAttackPatch: Player is {Player.m_localPlayer.GetHoverName()} and Riding Lox: {PlayerStartDoodadControlPatch.RidingLox}");
             return !PlayerStartDoodadControlPatch.RidingLox || Player.m_localPlayer.m_doodadController == null;
         }
     }
@@ -179,7 +182,6 @@ namespace ILoxYou
     {
         static void Postfix(Player __instance)
         {
-            //ILoxYouPlugin.ILoxYouLogger.LogDebug("PlayerUpdateDoodadControlsPatch: Postfix executed.");
             if (__instance.m_doodadController == null || !__instance.m_doodadController.IsValid() || !PlayerStartDoodadControlPatch.RidingLox)
                 return;
 
@@ -192,7 +194,7 @@ namespace ILoxYou
                 return;
             }
 
-            // Detect and handle jump input specifically for dismounting
+            // Detect and handle jump/interact input specifically for dismounting
             if (ZInput.GetButton("Jump") || ZInput.GetButtonDown("JoyJump") || ((ZInput.GetButtonDown("Use") || ZInput.GetButtonDown("JoyUse")) && !Hud.InRadial() && __instance.m_hovering?.GetComponent<Sadle>() == null))
             {
                 ILoxYouPlugin.LogIfDebug("PlayerUpdateDoodadControlsPatch: Jump button pressed, stopping control.");
