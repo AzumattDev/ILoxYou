@@ -12,7 +12,7 @@ namespace ILoxYou
     public class ILoxYouPlugin : BaseUnityPlugin
     {
         internal const string ModName = "ILoxYou";
-        internal const string ModVersion = "1.0.10";
+        internal const string ModVersion = "1.0.6";
         internal const string Author = "Azumatt";
         private const string ModGUID = $"{Author}.{ModName}";
         private readonly Harmony _harmony = new(ModGUID);
@@ -232,9 +232,8 @@ namespace ILoxYou
             p.m_zanim.SetBool(p.m_attachAnimation, false);
             p.m_nview.GetZDO().Set(ZDOVars.s_inBed, false);
             p.ResetCloth();
-            PlayerStartDoodadControlPatch.RidingLox = false;//must be set to false before StopDoodadControl or the Prefix patch will cause the original function to not fire.
+            PlayerStartDoodadControlPatch.RidingLox = false; //must be set to false before StopDoodadControl or the Prefix patch will cause the original function to not fire.
             p.StopDoodadControl();
-            //p.m_doodadController = null;//shouldnt be necessary, is covered in StopDoodadControl
             PlayerStartDoodadControlPatch.RidingHumanoid = null!;
         }
 

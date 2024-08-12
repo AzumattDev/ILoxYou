@@ -1,6 +1,6 @@
 {
   "name": "ILoxYou",
-  "version_number": "1.0.5",
+  "version_number": "1.0.6",
   "website_url": "https://discord.gg/pdHgy6Bsng",
   "description": "Adds ability to use Lox attacks while mounted. Requested and named by Aldhari.",
   "dependencies": [
