@@ -16,7 +16,7 @@ namespace ILoxYou
     public class ILoxYouPlugin : BaseUnityPlugin
     {
         internal const string ModName = "ILoxYou";
-        internal const string ModVersion = "1.0.5";
+        internal const string ModVersion = "1.0.6";
         internal const string Author = "Azumatt";
         private const string ModGUID = $"{Author}.{ModName}";
         private readonly Harmony _harmony = new(ModGUID);
@@ -144,13 +144,9 @@ namespace ILoxYou
             }
 
 
-            if (!PlayerStartDoodadControlPatch.RidingLox)
-            {
-                ILoxYouPlugin.LogIfDebug("PlayerStopDoodadControlPatch: Player is not riding a Lox.");
-                return true;
-            }
-
-            return false;
+            if (PlayerStartDoodadControlPatch.RidingLox) return false;
+            ILoxYouPlugin.LogIfDebug("PlayerStopDoodadControlPatch: Player is not riding a Lox.");
+            return true;
         }
     }
 
@@ -234,9 +230,9 @@ namespace ILoxYou
             p.m_zanim.SetBool(p.m_attachAnimation, false);
             p.m_nview.GetZDO().Set(ZDOVars.s_inBed, false);
             p.ResetCloth();
+            PlayerStartDoodadControlPatch.RidingLox = false; //must be set to false before StopDoodadControl or the Prefix patch will cause the original function to not fire.
             p.StopDoodadControl();
-            p.m_doodadController = null;
-            PlayerStartDoodadControlPatch.RidingLox = false;
+            PlayerStartDoodadControlPatch.RidingHumanoid = null!;
         }
 
         public static void HandleInput(this Player player)
