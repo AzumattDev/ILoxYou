@@ -12,7 +12,7 @@ namespace ILoxYou
     public class ILoxYouPlugin : BaseUnityPlugin
     {
         internal const string ModName = "ILoxYou";
-        internal const string ModVersion = "1.0.6";
+        internal const string ModVersion = "1.0.7";
         internal const string Author = "Azumatt";
         private const string ModGUID = $"{Author}.{ModName}";
         private readonly Harmony _harmony = new(ModGUID);
@@ -56,18 +56,18 @@ namespace ILoxYou
             List<Character> guysList =
                 (from hud
                         in EnemyHud.instance.m_huds.Values
-                 where hud.m_character != null
-                       && hud.m_character.IsTamed()
-                       && hud.m_character.GetZDOID() == PlayerStartDoodadControlPatch.LastHumanoidZDOID
-                 select hud.m_character
+                    where hud.m_character != null
+                          && hud.m_character.IsTamed()
+                          && hud.m_character.GetZDOID() == PlayerStartDoodadControlPatch.LastHumanoidZDOID
+                    select hud.m_character
                 ).ToList();
             //Add minimap pins if they haven't been added already.
             foreach (Character character
                      in from character in guysList
-                        where character is not Player
-                        let flag = __instance.m_pins.Any(pin => pin.m_name.Equals($"$hud_tame {character.GetHoverName()} [Health: {character.GetHealth()}]"))
-                        where !flag
-                        select character)
+                     where character is not Player
+                     let flag = __instance.m_pins.Any(pin => pin.m_name.Equals($"$hud_tame {character.GetHoverName()} [Health: {character.GetHealth()}]"))
+                     where !flag
+                     select character)
             {
                 Minimap.PinData? pin = __instance.AddPin(character.GetCenterPoint(), Minimap.PinType.None, $"$hud_tame {character.GetHoverName()} [Health: {character.GetHealth()}]", false, false);
                 if (ILoxYouPlugin.LoxSprite != null)
@@ -102,7 +102,11 @@ namespace ILoxYou
                 }
             }
 
-            if (removePins.Count > 0) { ILoxYouPlugin.ILoxYouLogger.LogDebug("number of pins to remove: " + removePins.Count); }
+            if (removePins.Count > 0)
+            {
+                ILoxYouPlugin.ILoxYouLogger.LogDebug("number of pins to remove: " + removePins.Count);
+            }
+
             foreach (Minimap.PinData pin in removePins)
             {
                 __instance.RemovePin(pin);
@@ -160,7 +164,7 @@ namespace ILoxYou
         {
             ILoxYouPlugin.LogIfDebug($"HumanoidStartAttackPatch: Humanoid {__instance.GetHoverName()} attempting to start attack.");
             if (__instance != Player.m_localPlayer) return true;
-            ILoxYouPlugin.LogIfDebug($"HumanoidStartAttackPatch: Player is {Player.m_localPlayer.GetHoverName()} and Riding Lox: {PlayerStartDoodadControlPatch.RidingLox}");
+            ILoxYouPlugin.LogIfDebug($"HumanoidStartAttackPatch: Player is {Player.m_localPlayer.GetHoverName()} and riding Lox: {PlayerStartDoodadControlPatch.RidingLox}");
             return !PlayerStartDoodadControlPatch.RidingLox || Player.m_localPlayer.m_doodadController == null;
         }
     }
