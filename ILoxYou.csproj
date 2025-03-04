@@ -78,6 +78,12 @@
         <Reference Include="BepInEx">
             <HintPath>$(BepInExPath)\core\BepInEx.dll</HintPath>
         </Reference>
+        <Reference Include="Splatform">
+          <HintPath>$(CorlibPath)\Splatform.dll</HintPath>
+        </Reference>
+        <Reference Include="Splatform.Steam">
+          <HintPath>$(CorlibPath)\Splatform.Steam.dll</HintPath>
+        </Reference>
         <Reference Include="System"/>
         <Reference Include="System.Core"/>
         <Reference Include="System.Data"/>

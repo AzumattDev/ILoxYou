@@ -1,5 +1,6 @@
 | `Version` | `Update Notes`                                                                                                                                                                                              |
 |-----------|-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| 1.0.8     | - Update for Valheim latest update (0.220.3)                                                                                                                                                                |
 | 1.0.7     | - Accepted PR from Kherae                                                                                                                                                                                   |
 | 1.0.6     | - Mimic the fixes in AsksvinImproved to also fix this mod.                                                                                                                                                  |
 | 1.0.5     | - Fix an issue where the player couldn't attack after dismount.<br/> - Can now dismount with the interact key again.                                                                                        |
